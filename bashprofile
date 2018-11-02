@@ -1,0 +1,134 @@
+################################################################################
+# Bash Prompt                                                                  #
+################################################################################
+
+function prompt_command {
+
+# Get the width of the terminal
+TERMWIDTH=${COLUMNS}
+
+# Set the hostname
+hostnam=$(echo -n $HOSTNAME | sed -e "s/[\.].*//")
+
+# "whoami" and "pwd" include a trailing newline
+usernam=$(whoami)
+newPWD="${PWD}"
+
+# Set the fill size to the remaining columns
+let fillsize=${TERMWIDTH}-${promptsize}
+
+# Build out the fill
+fill=""
+while [ "$fillsize" -gt "0" ]
+do
+    fill="${fill}─"
+    let fillsize=${fillsize}-1
+done
+
+# If the working directory is too long then truncate it
+if [ "$fillsize" -lt "0" ]
+then
+   let cut=3-${fillsize}
+    newPWD="...$(echo -n $PWD | sed -e "s/\(^.\{$cut\}\)\(.*\)/\2/")"
+fi
+}
+
+# Bash provides an environment variable called PROMPT_COMMAND.
+# The contents of this variable are executed as a regular Bash
+# command just before Bash displays a prompt.
+# So whenever the prompt is displayed the variables above are re-calculated
+PROMPT_COMMAND=prompt_command
+
+# Set the prompt
+# The strange chunks starting and ending with brackets are for colors
+# The first one sets the color to Cyan
+# The one at the end resets the color back to the default
+
+
+# Set the secondary prompt
+PS2="=>"
+
+
+################################################################################
+# Gotta tune that bash_history…                                                #
+################################################################################
+
+# timestamps for later analysis. www.debian-administration.org/users/rossen/weblog/1
+export HISTTIMEFORMAT='%F %T '
+
+# keep history up to date, across sessions, in realtime
+#  http://unix.stackexchange.com/a/48113
+export HISTCONTROL=ignoredups:erasedups         # no duplicate entries
+export HISTSIZE=100000                          # big big history (default is 500)
+export HISTFILESIZE=$HISTSIZE                   # big big history
+which shopt > /dev/null && shopt -s histappend  # append to history, don't overwrite it
+
+# Save and reload the history after each command finishes
+export PROMPT_COMMAND="history -a; history -c; history -r; $PROMPT_COMMAND"
+
+# ^ the only downside with this is [up] on the readline will go over all history not just this bash session.
+
+
+################################################################################
+# Alias Setup                                                                  #
+################################################################################
+
+# Easily change directories
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias .....='cd ../../../..'
+
+# -i    Cause cp to write a prompt to the standard error output before
+#            copying a file that would overwrite an existing file.  If the
+#            response from the standard input begins with the character `y' or
+#            `Y', the file copy is attempted.  (The -i option overrides any pre-
+#            vious -n option.)
+# -v    Cause cp to be verbose, showing files as they are copied.
+alias cp='cp -iv'
+
+# -i      Cause mv to write a prompt to standard error before moving a file
+#              that would overwrite an existing file.  If the response from the
+#              standard input begins with the character `y' or `Y', the move is
+#              attempted.  (The -i option overrides any previous -f or -n
+#              options.)
+# -v      Cause mv to be verbose, showing files after they are moved.
+alias mv='mv -iv'
+
+# -p      Create intermediate directories as required.  If this option is
+#             not specified, the full path prefix of each operand must already
+#             exist.  On the other hand, with this option specified, no error
+#             will be reported if a directory given as an operand already
+#             exists.  Intermediate directories are created with permission
+#             bits of rwxrwxrwx (0777) as modified by the current umask, plus
+#             write and search permission for the owner.
+# -v      Be verbose when creating directories, listing them as they are created.
+alias mkdir='mkdir -pv'
+
+# which is apparently not reliable, use type instead
+# More info: http://stackoverflow.com/questions/592620/check-if-a-program-exists-from-a-bash-script
+alias which='type -all'
+
+# Display all the paths in the PATH variable
+alias path='echo -e ${PATH//:/\\n}'
+
+# cpuHogs:  Find CPU hogs
+# -----------------------------------------------------
+alias cpu_hogs='ps wwaxr -o pid,stat,%cpu,time,command | head -10'
+
+# myip:  Public facing IP Address
+#------------------------------------------------------
+alias myip='curl ip.appspot.com'
+
+# finderShowHidden:   Show hidden files in Finder
+# finderHideHidden:   Hide hidden files in Finder
+# -------------------------------------------------------------------
+alias finderShowHidden='defaults write com.apple.finder AppleShowAllFiles TRUE && killall Finder'
+alias finderHideHidden='defaults write com.apple.finder AppleShowAllFiles FALSE && killall Finder'
+
+# httpDebug:  Download a web page and show info on what took time
+# -------------------------------------------------------------------
+httpDebug () { /usr/bin/curl $@ -o /dev/null -w "dns: %{time_namelookup} connect: %{time_connect} pretransfer: %{time_pretransfer} starttransfer: %{time_starttransfer} total: %{time_total}\n" ; }
+
+
+. ~/.bash_prompt
